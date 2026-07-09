@@ -13,9 +13,9 @@
 #
 ---
 include:
-  - board: nice_nano
+  - board: nice_nano/nrf52840
     shield: charybdis_cirque_left
-  - board: nice_nano
+  - board: nice_nano/nrf52840
     shield: charybdis_cirque_right
-  - board: nice_nano
+  - board: nice_nano/nrf52840
     shield: settings_reset
