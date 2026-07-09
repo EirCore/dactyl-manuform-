@@ -21,5 +21,8 @@ if SHIELD_CHARYBDIS_CIRQUE_LEFT || SHIELD_CHARYBDIS_CIRQUE_RIGHT
         default y
     config ZMK_USB
         default y
+    config ZMK_BOARD_COMPAT
+        bool
+        default y
 
 endif
