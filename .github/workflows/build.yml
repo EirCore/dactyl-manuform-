@@ -2,4 +2,64 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    uses:  ALpotato/zmk/.github/workflows/build-user-config.yml@ptdevice-alpotato
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: nice_nano_v2
+            shield: charybdis_cirque_left
+          - board: nice_nano_v2
+            shield: charybdis_cirque_right
+          - board: nice_nano_v2
+            shield: settings_reset
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache Zephyr SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: ~/zephyr-sdk-0.14.2
+          key: zephyr-sdk-0.14.2-arm
+
+      - name: Install Zephyr SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        run: |
+          wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.14.2/zephyr-sdk-0.14.2_linux-x86_64_minimal.tar.gz
+          tar xf zephyr-sdk-0.14.2_linux-x86_64_minimal.tar.gz -C ~
+          ~/zephyr-sdk-0.14.2/setup.sh -t arm-zephyr-eabi -h -c
+
+      - name: Setup west workspace
+        run: |
+          pip install west
+          west init -l config
+          west update
+
+      - name: Export Zephyr environment
+        run: |
+          pip install -r zephyr/scripts/requirements.txt
+          west zephyr-export
+
+      - name: Build firmware
+        run: |
+          west build -s zmk/app -d build -b ${{ matrix.board }} -- \
+            -DSHIELD=${{ matrix.shield }} \
+            -DZMK_CONFIG="${GITHUB_WORKSPACE}/config"
+
+      - name: Rename artifact
+        run: |
+          cp build/zephyr/zmk.uf2 ${{ matrix.shield }}.uf2 2>/dev/null || true
+          cp build/zephyr/zmk.bin ${{ matrix.shield }}.bin 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.shield }}
+          path: |
+            ${{ matrix.shield }}.uf2
+            ${{ matrix.shield }}.bin
